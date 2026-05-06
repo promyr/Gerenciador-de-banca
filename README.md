@@ -13,6 +13,8 @@ Software web basico para gestao de banca com foco operacional em odds ate 1.30.
 - Grafico da curva da banca.
 - Grafico de distribuicao de resultados.
 - Botao Demo com confirmacao antes de substituir dados locais.
+- Importacao sanitizada para evitar odds, stakes e resultados fora das regras.
+- Aviso de escopo local dos dados e fluxo de backup/restauracao por JSON.
 - Persistencia local no navegador.
 - Exportacao e importacao de dados em JSON.
 - Manifesto PWA e service worker para uso instalavel/offline quando servido via HTTP.
@@ -47,23 +49,33 @@ http://192.168.0.6:4173
 
 Se o celular nao abrir, libere a porta `4173` no firewall do Windows.
 
-## Como colocar online
+## Deploy
 
-### Opcao recomendada: Vercel
+O projeto esta conectado ao GitHub e a Vercel.
 
-1. Crie um repositorio no GitHub e envie estes arquivos.
-2. Acesse `https://vercel.com/new`.
-3. Importe o repositorio.
-4. Framework preset: `Other`.
-5. Build command: deixe vazio.
-6. Output directory: deixe vazio ou use `.`.
-7. Publique.
+- Repositorio: `https://github.com/promyr/Gerenciador-de-banca`
+- Producao: `https://gerenciador-de-banca-eight.vercel.app`
+- Branch principal: `main`
 
-Essa opcao e simples para o MVP porque o app e estatico. Ele fica online com HTTPS, pode ser aberto no celular e mantem os dados no navegador de cada dispositivo.
+Fluxo automatico:
+
+1. Faca commit das alteracoes.
+2. Envie para `main`.
+3. A Vercel cria um novo deploy a partir do GitHub.
+
+Fluxo manual usado neste workspace:
+
+```powershell
+npm.cmd run validate
+git push
+npx vercel deploy --prod --yes
+```
 
 ### Quando precisar sincronizar dados
 
-Para a mesma banca aparecer em todos os dispositivos, o proximo passo e adicionar backend com login e banco de dados. A rota mais direta seria:
+Hoje os dados ficam em `localStorage`, ou seja, no navegador/dispositivo atual. Para levar dados para outro aparelho, use Exportar JSON no dispositivo origem e Importar JSON no dispositivo destino.
+
+Para a mesma banca aparecer automaticamente em todos os dispositivos, o proximo passo e adicionar backend com login e banco de dados. A rota mais direta seria:
 
 - Frontend: manter este app.
 - Backend: Supabase ou Firebase para autenticacao e banco.

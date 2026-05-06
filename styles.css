@@ -158,6 +158,15 @@ label.icon-button {
   pointer-events: none;
 }
 
+.hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .icon-button:hover,
 .text-button:hover,
 .primary-button:hover,
@@ -172,6 +181,17 @@ label.icon-button {
 .insight-grid {
   display: grid;
   gap: 16px;
+}
+
+.data-scope-note,
+.chart-summary {
+  margin: 0 0 16px;
+  color: var(--subtle);
+  font-size: 0.84rem;
+}
+
+.chart-summary {
+  margin: 12px 0 0;
 }
 
 .dashboard-grid {
@@ -354,6 +374,12 @@ legend {
 
 .result-option input:checked + span {
   color: #07110d;
+}
+
+.result-option input:focus-visible + span {
+  outline: 3px solid rgba(223, 189, 115, 0.72);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(198, 161, 90, 0.16);
 }
 
 .result-option.is-win input:checked + span {

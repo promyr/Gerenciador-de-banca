@@ -24,14 +24,18 @@
           <button class="icon-button" id="exportData" type="button" title="Exportar dados" aria-label="Exportar dados">
             <span aria-hidden="true">&darr;</span>
           </button>
-          <label class="icon-button" title="Importar dados" aria-label="Importar dados">
+          <button class="icon-button" id="importButton" type="button" title="Importar dados" aria-label="Importar dados">
             <span aria-hidden="true">&uarr;</span>
-            <input id="importData" type="file" accept="application/json" />
-          </label>
+          </button>
+          <input id="importData" class="hidden-file-input" type="file" accept="application/json" />
         </div>
       </header>
 
       <main>
+        <p class="data-scope-note">
+          Dados salvos neste dispositivo. Use exportar/importar para backup ou para levar a banca para outro aparelho.
+        </p>
+
         <section class="dashboard-grid" aria-label="Resumo da banca">
           <article class="metric hero-metric">
             <span>Banca atual</span>
@@ -167,6 +171,7 @@
               </div>
             </div>
             <canvas id="bankrollChart" width="900" height="320" aria-label="Grafico da curva da banca"></canvas>
+            <p class="chart-summary" id="bankrollChartSummary">Sem dados suficientes para resumir a curva da banca.</p>
           </article>
 
           <article class="panel breakdown-panel">
@@ -196,6 +201,7 @@
                 <span><i class="legend-blue"></i>Outros</span>
               </div>
             </div>
+            <p class="chart-summary" id="resultDonutSummary">Sem resultados registrados para resumir.</p>
             <div class="quick-stats">
               <div><span>Entradas</span><strong id="totalEntries">0</strong></div>
               <div><span>Em aberto</span><strong id="pendingEntries">0</strong></div>

@@ -47,6 +47,18 @@ const bettingOptionLabels = [
   "Exchange",
 ];
 
+const validResults = new Set(["win", "loss", "void", "pending"]);
+const legacyMarketFallbacks = {
+  "dupla chance": "Futebol",
+  "empate anula": "Futebol",
+  "under / over": "Futebol",
+  "over cantos": "Futebol",
+  escanteios: "Futebol",
+  gols: "Futebol",
+  live: "Futebol",
+  exchange: "Futebol",
+};
+
 const state = loadState();
 let historyFilter = "all";
 
@@ -58,6 +70,7 @@ const elements = {
   bankrollChart: document.querySelector("#bankrollChart"),
   resultDonut: document.querySelector("#resultDonut"),
   importData: document.querySelector("#importData"),
+  importButton: document.querySelector("#importButton"),
   exportData: document.querySelector("#exportData"),
   loadDemo: document.querySelector("#loadDemo"),
   clearEntries: document.querySelector("#clearEntries"),
@@ -78,6 +91,8 @@ const elements = {
   pendingEntries: document.querySelector("#pendingEntries"),
   bestReturn: document.querySelector("#bestReturn"),
   worstReturn: document.querySelector("#worstReturn"),
+  bankrollChartSummary: document.querySelector("#bankrollChartSummary"),
+  resultDonutSummary: document.querySelector("#resultDonutSummary"),
 };
 
 const inputs = {
@@ -97,7 +112,7 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     return {
-      settings: { ...defaults.settings, ...saved?.settings },
+      settings: normalizeSettings(saved?.settings),
       entries: Array.isArray(saved?.entries) ? saved.entries.map(normalizeEntry) : [],
     };
   } catch {
@@ -106,16 +121,45 @@ function loadState() {
 }
 
 function normalizeEntry(entry) {
+  entry = entry || {};
+  const result = validResults.has(entry.result) ? entry.result : "pending";
+  const stake = Math.max(0, toNumber(entry.stake));
+  const odd = clamp(toNumber(entry.odd) || 1.25, 1.01, 1.3);
+
   return {
     id: entry.id || crypto.randomUUID(),
-    date: entry.date || new Date().toISOString().slice(0, 10),
-    strategy: entry.strategy || entry.market || "Entrada registrada",
-    market: entry.market || "Sem mercado",
-    stake: toNumber(entry.stake),
-    odd: toNumber(entry.odd) || 1.25,
-    result: entry.result || "pending",
+    date: normalizeDate(entry.date),
+    strategy: normalizeText(entry.strategy || entry.market, "Entrada registrada"),
+    market: normalizeMarket(entry.market),
+    stake,
+    odd,
+    result,
     notes: entry.notes || "",
   };
+}
+
+function normalizeSettings(settings = {}) {
+  settings = settings || {};
+  return {
+    initialBankroll: Math.max(0, toNumber(settings.initialBankroll ?? defaults.settings.initialBankroll)),
+    stakePercent: clamp(toNumber(settings.stakePercent ?? defaults.settings.stakePercent), 0.1, 20),
+  };
+}
+
+function normalizeDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
+}
+
+function normalizeText(value, fallback) {
+  const text = String(value || "").trim();
+  return text || fallback;
+}
+
+function normalizeMarket(value) {
+  const text = normalizeText(value, "Futebol");
+  return legacyMarketFallbacks[text.toLowerCase()] || text;
 }
 
 function persist() {
@@ -125,6 +169,10 @@ function persist() {
 function toNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function formatPercent(value) {
@@ -205,6 +253,8 @@ function renderMetrics() {
   const isAlert = metrics.roi < -8 || (metrics.hitRate < 75 && metrics.completed.length >= 8);
   elements.riskBadge.textContent = isAlert ? "Atencao nos numeros" : "Operacao limpa";
   elements.riskBadge.classList.toggle("danger", isAlert);
+  elements.bankrollChartSummary.textContent = `Banca inicial ${currency.format(state.settings.initialBankroll)}, banca atual ${currency.format(metrics.currentBankroll)} e lucro liquido ${currency.format(metrics.netProfit)}.`;
+  elements.resultDonutSummary.textContent = `${metrics.wins.length} greens, ${metrics.losses.length} reds, ${metrics.voided.length} anuladas e ${metrics.pending.length} em aberto. Taxa de acerto ${formatPercent(metrics.hitRate)}.`;
 }
 
 function renderHistory() {
@@ -533,6 +583,10 @@ elements.loadDemo.addEventListener("click", () => {
   render();
 });
 
+elements.importButton.addEventListener("click", () => {
+  elements.importData.click();
+});
+
 elements.entryRows.addEventListener("click", (event) => {
   const resolveButton = event.target.closest("[data-resolve-id]");
   if (resolveButton) {
@@ -591,7 +645,7 @@ elements.importData.addEventListener("change", async (event) => {
 
   try {
     const imported = JSON.parse(await file.text());
-    state.settings = { ...defaults.settings, ...imported.settings };
+    state.settings = normalizeSettings(imported.settings);
     state.entries = Array.isArray(imported.entries) ? imported.entries.map(normalizeEntry) : [];
     persist();
     render();
