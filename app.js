@@ -25,13 +25,26 @@ const defaultStrategies = [
 
 const defaultMarkets = [
   "Futebol",
+  "Basquete",
+  "Tenis",
+  "Volei",
+  "Futebol americano",
+  "Baseball",
+  "Hockey",
+  "MMA / Boxe",
+  "eSports",
+];
+
+const bettingOptionLabels = [
+  ...defaultStrategies,
+  "Dupla chance",
+  "Empate anula",
+  "Under / Over",
+  "Over cantos",
   "Escanteios",
   "Gols",
   "Live",
   "Exchange",
-  "Dupla chance",
-  "Empate anula",
-  "Under / Over",
 ];
 
 const state = loadState();
@@ -246,15 +259,17 @@ function renderHistory() {
 
 function renderSuggestionLists() {
   renderSelectOptions(inputs.strategy, mergeOptionsByUsage("strategy", defaultStrategies));
-  renderSelectOptions(inputs.market, mergeOptionsByUsage("market", defaultMarkets));
+  renderSelectOptions(inputs.market, mergeOptionsByUsage("market", defaultMarkets, bettingOptionLabels));
 }
 
-function mergeOptionsByUsage(key, fallbackOptions) {
+function mergeOptionsByUsage(key, fallbackOptions, excludedOptions = []) {
   const counts = new Map();
+  const excluded = new Set(excludedOptions.map((value) => value.toLowerCase()));
 
   state.entries.forEach((entry) => {
     const value = String(entry[key] || "").trim();
     if (!value) return;
+    if (excluded.has(value.toLowerCase())) return;
     counts.set(value, (counts.get(value) || 0) + 1);
   });
 
@@ -599,17 +614,17 @@ if ("serviceWorker" in navigator) {
 function createDemoEntries() {
   return [
     ["2026-04-18", "Dupla chance mandante", "Futebol", 45, 1.24, "win", "Favorito em casa"],
-    ["2026-04-19", "Over cantos asiatico", "Escanteios", 50, 1.27, "win", "Pressao alta"],
+    ["2026-04-19", "Over cantos asiatico", "Futebol", 50, 1.27, "win", "Pressao alta"],
     ["2026-04-20", "Empate anula visitante", "Futebol", 45, 1.22, "loss", "Jogo travado"],
-    ["2026-04-21", "Under gols ao vivo", "Live", 40, 1.19, "win", "Ritmo baixo"],
+    ["2026-04-21", "Under gols ao vivo", "Futebol", 40, 1.19, "win", "Ritmo baixo"],
     ["2026-04-22", "Dupla chance mandante", "Futebol", 55, 1.28, "win", "Volume ofensivo"],
     ["2026-04-23", "Over 0.5 HT", "Futebol", 45, 1.21, "void", "Entrada anulada"],
-    ["2026-04-24", "Lay zebra protegido", "Exchange", 50, 1.26, "loss", "Mercado virou"],
-    ["2026-04-25", "Over cantos asiatico", "Escanteios", 60, 1.25, "win", "Laterais agressivos"],
+    ["2026-04-24", "Lay zebra protegido", "Tenis", 50, 1.26, "loss", "Mercado virou"],
+    ["2026-04-25", "Over cantos asiatico", "Futebol", 60, 1.25, "win", "Laterais agressivos"],
     ["2026-04-26", "Empate anula mandante", "Futebol", 55, 1.23, "win", "Mandante dominante"],
-    ["2026-04-27", "Under gols ao vivo", "Live", 50, 1.18, "pending", "Aguardando resultado"],
+    ["2026-04-27", "Under gols ao vivo", "Basquete", 50, 1.18, "pending", "Aguardando resultado"],
     ["2026-04-28", "Dupla chance mandante", "Futebol", 60, 1.29, "win", "Boa leitura pre-jogo"],
-    ["2026-04-29", "Over cantos asiatico", "Escanteios", 55, 1.24, "loss", "Expulsao mudou o jogo"],
+    ["2026-04-29", "Over cantos asiatico", "Futebol", 55, 1.24, "loss", "Expulsao mudou o jogo"],
   ].map(([date, strategy, market, stake, odd, result, notes]) => ({
     id: crypto.randomUUID(),
     date,
