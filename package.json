@@ -1,0 +1,10 @@
+{
+  "name": "banca-prime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gestao de banca com registro simples, historico e painel de lucros e perdas.",
+  "scripts": {
+    "start": "node dev-server.js",
+    "validate": "node --check app.js && node --check dev-server.js && node --check service-worker.js"
+  }
+}

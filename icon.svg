@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Banca Prime">
+  <rect width="128" height="128" rx="20" fill="#101417"/>
+  <path d="M30 86V42h25c10 0 16 6 16 14 0 5-3 10-8 12 7 2 11 7 11 15 0 10-8 17-20 17H30v-14h24c4 0 7-2 7-6s-3-6-7-6H44V60h10c3 0 6-2 6-5s-3-5-6-5H44v36H30Z" fill="#d9b45f"/>
+  <path d="M83 86V42h15v44H83Zm-8-29 14-15h17L91 57h-16Zm16 6 17 23H91L77 66l14-3Z" fill="#f5f1e8"/>
+</svg>
