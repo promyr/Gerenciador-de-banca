@@ -12,7 +12,30 @@ const defaults = {
   entries: [],
 };
 
+const defaultStrategies = [
+  "Dupla chance mandante",
+  "Dupla chance visitante",
+  "Empate anula mandante",
+  "Empate anula visitante",
+  "Over cantos asiatico",
+  "Under gols ao vivo",
+  "Over 0.5 HT",
+  "Lay zebra protegido",
+];
+
+const defaultMarkets = [
+  "Futebol",
+  "Escanteios",
+  "Gols",
+  "Live",
+  "Exchange",
+  "Dupla chance",
+  "Empate anula",
+  "Under / Over",
+];
+
 const state = loadState();
+let historyFilter = "all";
 
 const elements = {
   entryForm: document.querySelector("#entryForm"),
@@ -20,8 +43,10 @@ const elements = {
   entryRows: document.querySelector("#entryRows"),
   emptyStateTemplate: document.querySelector("#emptyStateTemplate"),
   bankrollChart: document.querySelector("#bankrollChart"),
+  resultDonut: document.querySelector("#resultDonut"),
   importData: document.querySelector("#importData"),
   exportData: document.querySelector("#exportData"),
+  loadDemo: document.querySelector("#loadDemo"),
   clearEntries: document.querySelector("#clearEntries"),
   currentBankroll: document.querySelector("#currentBankroll"),
   bankrollDelta: document.querySelector("#bankrollDelta"),
@@ -45,10 +70,11 @@ const elements = {
 const inputs = {
   entryDate: document.querySelector("#entryDate"),
   strategy: document.querySelector("#strategy"),
+  customStrategy: document.querySelector("#customStrategy"),
   market: document.querySelector("#market"),
+  customMarket: document.querySelector("#customMarket"),
   stake: document.querySelector("#stake"),
   odd: document.querySelector("#odd"),
-  result: document.querySelector("#result"),
   notes: document.querySelector("#notes"),
   initialBankroll: document.querySelector("#initialBankroll"),
   stakePercent: document.querySelector("#stakePercent"),
@@ -103,6 +129,7 @@ function getMetrics() {
   const wins = completed.filter((entry) => entry.result === "win");
   const losses = completed.filter((entry) => entry.result === "loss");
   const pending = state.entries.filter((entry) => entry.result === "pending");
+  const voided = state.entries.filter((entry) => entry.result === "void");
   const profits = completed.map(calculateProfit);
   const grossProfit = wins.reduce((total, entry) => total + calculateProfit(entry), 0);
   const grossLoss = Math.abs(losses.reduce((total, entry) => total + calculateProfit(entry), 0));
@@ -118,6 +145,7 @@ function getMetrics() {
     wins,
     losses,
     pending,
+    voided,
     grossProfit,
     grossLoss,
     netProfit,
@@ -161,23 +189,32 @@ function renderMetrics() {
   elements.worstReturn.textContent = currency.format(metrics.worstReturn);
 
   const isAlert = metrics.roi < -8 || (metrics.hitRate < 75 && metrics.completed.length >= 8);
-  elements.riskBadge.textContent = isAlert ? "Atenção nos números" : "Operacao limpa";
+  elements.riskBadge.textContent = isAlert ? "Atencao nos numeros" : "Operacao limpa";
   elements.riskBadge.classList.toggle("danger", isAlert);
 }
 
 function renderHistory() {
   elements.entryRows.replaceChildren();
+  const visibleEntries =
+    historyFilter === "pending" ? state.entries.filter((entry) => entry.result === "pending") : state.entries;
 
-  if (state.entries.length === 0) {
+  if (visibleEntries.length === 0) {
     elements.entryRows.append(elements.emptyStateTemplate.content.cloneNode(true));
     return;
   }
 
-  state.entries
+  visibleEntries
     .slice()
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .forEach((entry) => {
       const profit = calculateProfit(entry);
+      const pendingActions =
+        entry.result === "pending"
+          ? `<div class="resolve-actions">
+              <button class="mini-action win-action" type="button" data-resolve-id="${entry.id}" data-result="win">Green</button>
+              <button class="mini-action loss-action" type="button" data-resolve-id="${entry.id}" data-result="loss">Red</button>
+            </div>`
+          : "";
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>${entry.date}</td>
@@ -191,10 +228,66 @@ function renderHistory() {
         <td>${entry.odd.toFixed(2)}</td>
         <td class="result-${entry.result}">${translateResult(entry.result)}</td>
         <td class="${profit >= 0 ? "positive" : "negative"}">${currency.format(profit)}</td>
-        <td><button class="row-action" type="button" title="Remover entrada" aria-label="Remover entrada" data-id="${entry.id}">&times;</button></td>
+        <td>
+          ${pendingActions}
+          <button class="row-action" type="button" title="Remover entrada" aria-label="Remover entrada" data-id="${entry.id}">&times;</button>
+        </td>
       `;
       elements.entryRows.append(row);
     });
+}
+
+function renderSuggestionLists() {
+  renderSelectOptions(inputs.strategy, mergeOptionsByUsage("strategy", defaultStrategies));
+  renderSelectOptions(inputs.market, mergeOptionsByUsage("market", defaultMarkets));
+}
+
+function mergeOptionsByUsage(key, fallbackOptions) {
+  const counts = new Map();
+
+  state.entries.forEach((entry) => {
+    const value = String(entry[key] || "").trim();
+    if (!value) return;
+    counts.set(value, (counts.get(value) || 0) + 1);
+  });
+
+  fallbackOptions.forEach((value) => {
+    if (!counts.has(value)) counts.set(value, 0);
+  });
+
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
+    .map(([value]) => value);
+}
+
+function renderSelectOptions(element, options) {
+  const selected = element.value;
+  element.replaceChildren(
+    ...options.map((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      return option;
+    }),
+  );
+  const customOption = document.createElement("option");
+  customOption.value = "__custom";
+  customOption.textContent = "Adicionar nova opcao";
+  element.append(customOption);
+  if (options.includes(selected)) element.value = selected;
+  if (!element.value && options.length > 0) element.value = options[0];
+}
+
+function getSelectValue(selectElement, customInput) {
+  if (selectElement.value !== "__custom") return selectElement.value;
+  return customInput.value.trim();
+}
+
+function syncCustomOptionInputs() {
+  inputs.customStrategy.classList.toggle("is-visible", inputs.strategy.value === "__custom");
+  inputs.customMarket.classList.toggle("is-visible", inputs.market.value === "__custom");
+  inputs.customStrategy.required = inputs.strategy.value === "__custom";
+  inputs.customMarket.required = inputs.market.value === "__custom";
 }
 
 function renderChart() {
@@ -237,11 +330,11 @@ function renderChart() {
     const y = height - padding - ((point.value - minValue) / range) * (height - padding * 2);
     return { x, y };
   });
-  const lineColor = getMetrics().netProfit >= 0 ? "#5fd29a" : "#ef7f74";
+  const lineColor = getMetrics().netProfit >= 0 ? "#79c69a" : "#d98780";
   const fillGradient = ctx.createLinearGradient(0, padding, 0, height - padding);
   fillGradient.addColorStop(
     0,
-    getMetrics().netProfit >= 0 ? "rgba(95, 224, 160, 0.26)" : "rgba(240, 123, 114, 0.24)",
+    getMetrics().netProfit >= 0 ? "rgba(121, 198, 154, 0.2)" : "rgba(217, 135, 128, 0.2)",
   );
   fillGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
 
@@ -279,12 +372,62 @@ function renderChart() {
   ctx.fillText(currency.format(points.at(-1).value), padding, 20);
 }
 
+function renderResultDonut() {
+  const canvas = elements.resultDonut;
+  const ctx = canvas.getContext("2d");
+  const ratio = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.max(240, rect.width * ratio);
+  canvas.height = 190 * ratio;
+  ctx.scale(ratio, ratio);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const metrics = getMetrics();
+  const slices = [
+    { value: metrics.wins.length, color: "#79c69a" },
+    { value: metrics.losses.length, color: "#d98780" },
+    { value: metrics.pending.length + metrics.voided.length, color: "#8fb7d3" },
+  ];
+  const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+  const centerX = (rect.width || 240) / 2;
+  const centerY = 92;
+  const radius = 68;
+  let startAngle = -Math.PI / 2;
+
+  if (total === 0) {
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 18;
+    ctx.stroke();
+  } else {
+    slices.forEach((slice) => {
+      const angle = (slice.value / total) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, startAngle, startAngle + angle);
+      ctx.strokeStyle = slice.color;
+      ctx.lineWidth = 18;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      startAngle += angle;
+    });
+  }
+
+  ctx.fillStyle = "#f7f4ea";
+  ctx.font = "800 22px Inter, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`${Math.round(metrics.hitRate)}%`, centerX, centerY + 2);
+  ctx.fillStyle = "#747f78";
+  ctx.font = "12px Inter, sans-serif";
+  ctx.fillText("acerto", centerX, centerY + 20);
+}
+
 function translateResult(result) {
   return {
     win: "Green",
     loss: "Red",
     void: "Anulada",
-    pending: "Pendente",
+    pending: "Em aberto",
   }[result];
 }
 
@@ -304,9 +447,12 @@ function escapeHtml(value) {
 
 function render() {
   syncSettingsForm();
+  renderSuggestionLists();
+  syncCustomOptionInputs();
   renderMetrics();
   renderHistory();
   renderChart();
+  renderResultDonut();
 }
 
 elements.entryForm.addEventListener("submit", (event) => {
@@ -323,11 +469,11 @@ elements.entryForm.addEventListener("submit", (event) => {
   state.entries.push({
     id: crypto.randomUUID(),
     date: inputs.entryDate.value,
-    strategy: inputs.strategy.value.trim(),
-    market: inputs.market.value.trim(),
+    strategy: getSelectValue(inputs.strategy, inputs.customStrategy),
+    market: getSelectValue(inputs.market, inputs.customMarket),
     stake: toNumber(inputs.stake.value),
     odd,
-    result: inputs.result.value,
+    result: new FormData(elements.entryForm).get("result"),
     notes: inputs.notes.value.trim(),
   });
 
@@ -336,6 +482,9 @@ elements.entryForm.addEventListener("submit", (event) => {
   inputs.entryDate.valueAsDate = new Date();
   render();
 });
+
+inputs.strategy.addEventListener("change", syncCustomOptionInputs);
+inputs.market.addEventListener("change", syncCustomOptionInputs);
 
 elements.settingsForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -347,7 +496,28 @@ elements.settingsForm.addEventListener("submit", (event) => {
   render();
 });
 
+elements.loadDemo.addEventListener("click", () => {
+  state.settings = {
+    initialBankroll: 1500,
+    stakePercent: 3,
+  };
+  state.entries = createDemoEntries();
+  persist();
+  render();
+});
+
 elements.entryRows.addEventListener("click", (event) => {
+  const resolveButton = event.target.closest("[data-resolve-id]");
+  if (resolveButton) {
+    const entry = state.entries.find((item) => item.id === resolveButton.dataset.resolveId);
+    if (entry) {
+      entry.result = resolveButton.dataset.result;
+      persist();
+      render();
+    }
+    return;
+  }
+
   const button = event.target.closest("[data-id]");
   if (!button) return;
 
@@ -357,6 +527,16 @@ elements.entryRows.addEventListener("click", (event) => {
     persist();
     render();
   }
+});
+
+document.querySelectorAll("[data-history-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    historyFilter = button.dataset.historyFilter;
+    document.querySelectorAll("[data-history-filter]").forEach((item) => {
+      item.classList.toggle("is-active", item === button);
+    });
+    renderHistory();
+  });
 });
 
 elements.clearEntries.addEventListener("click", () => {
@@ -396,9 +576,36 @@ elements.importData.addEventListener("change", async (event) => {
 });
 
 window.addEventListener("resize", renderChart);
+window.addEventListener("resize", renderResultDonut);
 inputs.entryDate.valueAsDate = new Date();
 render();
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js").catch(() => {});
+}
+
+function createDemoEntries() {
+  return [
+    ["2026-04-18", "Dupla chance mandante", "Futebol", 45, 1.24, "win", "Favorito em casa"],
+    ["2026-04-19", "Over cantos asiatico", "Escanteios", 50, 1.27, "win", "Pressao alta"],
+    ["2026-04-20", "Empate anula visitante", "Futebol", 45, 1.22, "loss", "Jogo travado"],
+    ["2026-04-21", "Under gols ao vivo", "Live", 40, 1.19, "win", "Ritmo baixo"],
+    ["2026-04-22", "Dupla chance mandante", "Futebol", 55, 1.28, "win", "Volume ofensivo"],
+    ["2026-04-23", "Over 0.5 HT", "Futebol", 45, 1.21, "void", "Entrada anulada"],
+    ["2026-04-24", "Lay zebra protegido", "Exchange", 50, 1.26, "loss", "Mercado virou"],
+    ["2026-04-25", "Over cantos asiatico", "Escanteios", 60, 1.25, "win", "Laterais agressivos"],
+    ["2026-04-26", "Empate anula mandante", "Futebol", 55, 1.23, "win", "Mandante dominante"],
+    ["2026-04-27", "Under gols ao vivo", "Live", 50, 1.18, "pending", "Aguardando resultado"],
+    ["2026-04-28", "Dupla chance mandante", "Futebol", 60, 1.29, "win", "Boa leitura pre-jogo"],
+    ["2026-04-29", "Over cantos asiatico", "Escanteios", 55, 1.24, "loss", "Expulsao mudou o jogo"],
+  ].map(([date, strategy, market, stake, odd, result, notes]) => ({
+    id: crypto.randomUUID(),
+    date,
+    strategy,
+    market,
+    stake,
+    odd,
+    result,
+    notes,
+  }));
 }

@@ -20,6 +20,7 @@
           <h1>Gestao refinada de banca</h1>
         </div>
         <div class="topbar-actions">
+          <button class="text-button" id="loadDemo" type="button">Demo</button>
           <button class="icon-button" id="exportData" type="button" title="Exportar dados" aria-label="Exportar dados">
             <span aria-hidden="true">&darr;</span>
           </button>
@@ -71,11 +72,33 @@
               </label>
               <label>
                 O que voce fez
-                <input id="strategy" type="text" placeholder="Ex.: Dupla chance mandante" required />
+                <select id="strategy" required>
+                  <option value="Dupla chance mandante">Dupla chance mandante</option>
+                  <option value="Dupla chance visitante">Dupla chance visitante</option>
+                  <option value="Empate anula mandante">Empate anula mandante</option>
+                  <option value="Empate anula visitante">Empate anula visitante</option>
+                  <option value="Over cantos asiatico">Over cantos asiatico</option>
+                  <option value="Under gols ao vivo">Under gols ao vivo</option>
+                  <option value="Over 0.5 HT">Over 0.5 HT</option>
+                  <option value="Lay zebra protegido">Lay zebra protegido</option>
+                  <option value="__custom">Adicionar nova opcao</option>
+                </select>
+                <input id="customStrategy" class="custom-option-input" type="text" placeholder="Nova opcao" />
               </label>
               <label>
                 Mercado
-                <input id="market" type="text" placeholder="Ex.: Over cantos, empate anula" required />
+                <select id="market" required>
+                  <option value="Futebol">Futebol</option>
+                  <option value="Escanteios">Escanteios</option>
+                  <option value="Gols">Gols</option>
+                  <option value="Live">Live</option>
+                  <option value="Exchange">Exchange</option>
+                  <option value="Dupla chance">Dupla chance</option>
+                  <option value="Empate anula">Empate anula</option>
+                  <option value="Under / Over">Under / Over</option>
+                  <option value="__custom">Adicionar nova opcao</option>
+                </select>
+                <input id="customMarket" class="custom-option-input" type="text" placeholder="Novo mercado" />
               </label>
               <label>
                 Stake
@@ -85,15 +108,25 @@
                 Odd
                 <input id="odd" type="number" min="1.01" max="1.3" step="0.01" placeholder="1.25" required />
               </label>
-              <label>
-                Resultado
-                <select id="result" required>
-                  <option value="win">Green</option>
-                  <option value="loss">Red</option>
-                  <option value="void">Anulada</option>
-                  <option value="pending">Pendente</option>
-                </select>
-              </label>
+              <fieldset class="result-field">
+                <legend>Resultado</legend>
+                <label class="result-option is-win">
+                  <input type="radio" name="result" value="win" checked />
+                  <span>Green</span>
+                </label>
+                <label class="result-option is-loss">
+                  <input type="radio" name="result" value="loss" />
+                  <span>Red</span>
+                </label>
+                <label class="result-option is-void">
+                  <input type="radio" name="result" value="void" />
+                  <span>Anulada</span>
+                </label>
+                <label class="result-option is-pending">
+                  <input type="radio" name="result" value="pending" />
+                  <span>Em aberto</span>
+                </label>
+              </fieldset>
               <label>
                 Observacao
                 <input id="notes" type="text" placeholder="Opcional: motivo ou contexto" />
@@ -154,9 +187,17 @@
                 <div class="bar-track loss"><i id="lossBar"></i></div>
               </div>
             </div>
+            <div class="donut-wrap">
+              <canvas id="resultDonut" width="280" height="190" aria-label="Distribuicao de resultados"></canvas>
+              <div class="donut-legend">
+                <span><i class="legend-green"></i>Green</span>
+                <span><i class="legend-red"></i>Red</span>
+                <span><i class="legend-blue"></i>Outros</span>
+              </div>
+            </div>
             <div class="quick-stats">
               <div><span>Entradas</span><strong id="totalEntries">0</strong></div>
-              <div><span>Pendentes</span><strong id="pendingEntries">0</strong></div>
+              <div><span>Em aberto</span><strong id="pendingEntries">0</strong></div>
               <div><span>Maior lucro</span><strong id="bestReturn">R$ 0,00</strong></div>
               <div><span>Maior perda</span><strong id="worstReturn">R$ 0,00</strong></div>
             </div>
@@ -169,7 +210,13 @@
               <p class="eyebrow">Historico</p>
               <h2>Entradas registradas</h2>
             </div>
-            <button class="ghost-button" id="clearEntries" type="button">Limpar historico</button>
+            <div class="history-actions">
+              <div class="history-tabs" aria-label="Filtro de entradas">
+                <button class="tab-button is-active" type="button" data-history-filter="all">Todas</button>
+                <button class="tab-button" type="button" data-history-filter="pending">Em aberto</button>
+              </div>
+              <button class="ghost-button" id="clearEntries" type="button">Limpar historico</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table>
