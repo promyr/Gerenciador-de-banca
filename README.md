@@ -4,14 +4,26 @@ Software web basico para gestao de banca com foco operacional em odds ate 1.30.
 
 ## O que inclui
 
-- Registro de entradas com data, mercado, stake, odd, resultado, conviccao e nota de criterio.
 - Registro simples do que foi feito, mercado, stake, odd, resultado e observacao.
+- Campos selecionaveis para estrategia e mercado, com opcoes mais usadas no topo.
+- Opcao para adicionar novas estrategias e mercados.
+- Entradas em aberto com aba dedicada e acoes para finalizar como Green ou Red.
 - Dashboard com banca atual, lucro liquido, ROI, taxa de acerto e exposicao media.
-- Painel representativo de lucros, perdas, entradas pendentes, maior lucro e maior perda.
+- Painel representativo de lucros, perdas, entradas em aberto, maior lucro e maior perda.
 - Grafico da curva da banca.
+- Grafico de distribuicao de resultados.
+- Botao Demo com confirmacao antes de substituir dados locais.
 - Persistencia local no navegador.
 - Exportacao e importacao de dados em JSON.
 - Manifesto PWA e service worker para uso instalavel/offline quando servido via HTTP.
+
+## Online
+
+Producao:
+
+```text
+https://gerenciador-de-banca-eight.vercel.app
+```
 
 ## Como rodar
 

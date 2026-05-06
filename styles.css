@@ -388,6 +388,16 @@ textarea {
   outline: none;
 }
 
+select option {
+  color: #1f2423;
+  background: #f1ede4;
+}
+
+select option:checked {
+  color: #111417;
+  background: #8fb7d3;
+}
+
 .custom-option-input {
   display: none;
 }

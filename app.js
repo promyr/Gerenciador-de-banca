@@ -125,23 +125,24 @@ function calculateProfit(entry) {
 }
 
 function getMetrics() {
-  const completed = state.entries.filter((entry) => entry.result !== "pending");
-  const wins = completed.filter((entry) => entry.result === "win");
-  const losses = completed.filter((entry) => entry.result === "loss");
+  const settled = state.entries.filter((entry) => entry.result === "win" || entry.result === "loss");
+  const wins = settled.filter((entry) => entry.result === "win");
+  const losses = settled.filter((entry) => entry.result === "loss");
   const pending = state.entries.filter((entry) => entry.result === "pending");
   const voided = state.entries.filter((entry) => entry.result === "void");
-  const profits = completed.map(calculateProfit);
+  const profits = settled.map(calculateProfit);
   const grossProfit = wins.reduce((total, entry) => total + calculateProfit(entry), 0);
   const grossLoss = Math.abs(losses.reduce((total, entry) => total + calculateProfit(entry), 0));
   const netProfit = grossProfit - grossLoss;
-  const totalStake = completed.reduce((total, entry) => total + entry.stake, 0);
-  const averageStake = completed.length ? totalStake / completed.length : 0;
-  const averageOdd = completed.length
-    ? completed.reduce((total, entry) => total + entry.odd, 0) / completed.length
+  const totalStake = settled.reduce((total, entry) => total + entry.stake, 0);
+  const averageStake = settled.length ? totalStake / settled.length : 0;
+  const averageOdd = settled.length
+    ? settled.reduce((total, entry) => total + entry.odd, 0) / settled.length
     : 0;
 
   return {
-    completed,
+    completed: settled,
+    settled,
     wins,
     losses,
     pending,
@@ -153,7 +154,7 @@ function getMetrics() {
     averageStake,
     averageOdd,
     currentBankroll: state.settings.initialBankroll + netProfit,
-    hitRate: completed.length ? (wins.length / completed.length) * 100 : 0,
+    hitRate: settled.length ? (wins.length / settled.length) * 100 : 0,
     roi: totalStake ? (netProfit / totalStake) * 100 : 0,
     bestReturn: profits.length ? Math.max(...profits) : 0,
     worstReturn: profits.length ? Math.min(...profits) : 0,
@@ -199,7 +200,13 @@ function renderHistory() {
     historyFilter === "pending" ? state.entries.filter((entry) => entry.result === "pending") : state.entries;
 
   if (visibleEntries.length === 0) {
-    elements.entryRows.append(elements.emptyStateTemplate.content.cloneNode(true));
+    const emptyState = elements.emptyStateTemplate.content.cloneNode(true);
+    const cell = emptyState.querySelector(".empty-state");
+    cell.textContent =
+      historyFilter === "pending"
+        ? "Nenhuma entrada em aberto no momento."
+        : "Registre a primeira entrada para iniciar a leitura da banca.";
+    elements.entryRows.append(emptyState);
     return;
   }
 
@@ -497,6 +504,11 @@ elements.settingsForm.addEventListener("submit", (event) => {
 });
 
 elements.loadDemo.addEventListener("click", () => {
+  if (state.entries.length > 0) {
+    const confirmed = confirm("Carregar a demo vai substituir os dados locais atuais. Deseja continuar?");
+    if (!confirmed) return;
+  }
+
   state.settings = {
     initialBankroll: 1500,
     stakePercent: 3,
