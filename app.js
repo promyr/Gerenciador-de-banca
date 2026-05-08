@@ -530,21 +530,6 @@ function render() {
 elements.entryForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const odd = toNumber(inputs.odd.value);
-  const stake = toNumber(inputs.stake.value);
-  const strategy = getSelectValue(inputs.strategy, inputs.customStrategy);
-  const market = getSelectValue(inputs.market, inputs.customMarket);
-
-  if (!strategy || !market) {
-    alert("Selecione uma opcao valida ou adicione uma nova opcao antes de registrar.");
-    return;
-  }
-
-  if (stake <= 0) {
-    inputs.stake.setCustomValidity("A stake precisa ser maior que zero.");
-    inputs.stake.reportValidity();
-    return;
-  }
-  inputs.stake.setCustomValidity("");
 
   if (odd > 1.3) {
     inputs.odd.setCustomValidity("O modelo foi desenhado para odds ate 1.30.");
@@ -553,18 +538,16 @@ elements.entryForm.addEventListener("submit", (event) => {
   }
 
   inputs.odd.setCustomValidity("");
-  state.entries.push(
-    normalizeEntry({
-      id: crypto.randomUUID(),
-      date: inputs.entryDate.value,
-      strategy,
-      market,
-      stake,
-      odd,
-      result: new FormData(elements.entryForm).get("result"),
-      notes: inputs.notes.value.trim(),
-    }),
-  );
+  state.entries.push({
+    id: crypto.randomUUID(),
+    date: inputs.entryDate.value,
+    strategy: getSelectValue(inputs.strategy, inputs.customStrategy),
+    market: getSelectValue(inputs.market, inputs.customMarket),
+    stake: toNumber(inputs.stake.value),
+    odd,
+    result: new FormData(elements.entryForm).get("result"),
+    notes: inputs.notes.value.trim(),
+  });
 
   persist();
   elements.entryForm.reset();
@@ -661,10 +644,6 @@ elements.importData.addEventListener("change", async (event) => {
   if (!file) return;
 
   try {
-    if (state.entries.length > 0) {
-      const confirmed = confirm("Importar vai substituir os dados locais atuais. Deseja continuar?");
-      if (!confirmed) return;
-    }
     const imported = JSON.parse(await file.text());
     state.settings = normalizeSettings(imported.settings);
     state.entries = Array.isArray(imported.entries) ? imported.entries.map(normalizeEntry) : [];
